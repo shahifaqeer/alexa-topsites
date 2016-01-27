@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 from bs4 import BeautifulSoup
 import requests
-import sys
+import sys, os
 from math import ceil
 from collections import defaultdict
 import csv
 
 BASE_URL='http://www.alexa.com/topsites/countries;%d/%s'
+COUNTRY_URL='http://www.alexa.com/topsites/countries'
 
 def get_top_country(country_code, number):
 
@@ -23,7 +24,7 @@ def get_top_country(country_code, number):
             data['rank'].append(bullet.div.contents[0])
             data['site'].append(bullet.p.a.contents[0])
 
-    filename = country_code + "_" + number + ".csv"
+    filename = country_code + "_" + str(number) + ".csv"
     with open("output/" + filename, 'w') as f:
         w = csv.DictWriter(f, data.keys())
         w.writeheader()
@@ -40,8 +41,20 @@ if __name__ == '__main__':
     country_code = sys.argv[1].upper()
     number = int(sys.argv[2])
 
+    if not os.path.exists('output'):
+        os.makedirs('output')
+
     if country_code == 'ALL':
-        pass
+        response = requests.get(COUNTRY_URL)
+        soup = BeautifulSoup(response.text)
+        uls = soup.find_all('ul', {'class': 'countries span3'})
+        for ul in uls:
+            #print ul
+            bullets = ul.find_all('li')
+            for bullet in bullets:
+                country_code = bullet.a['href'].split('/')[-1]
+                print country_code, bullet.a.contents[0]
+                get_top_country(country_code, number)
     else:
         get_top_country(country_code, number)
 
